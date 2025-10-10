@@ -1,9 +1,10 @@
-const express = require('express');
+// routes/uploadKnowledge.js
+import express from 'express';
 const router = express.Router();
-const { uploadKnowledge } = require('../controllers/knowledgeController');
 
+import { uploadKnowledge } from '../controllers/knowledgeController.js';
 
+// POST route to upload knowledge
 router.post('/upload', uploadKnowledge);
 
-
-module.exports = router;
+export default router;

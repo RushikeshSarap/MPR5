@@ -1,5 +1,4 @@
-// Make sure your package.json has "type": "module" for ES module support
-// OR run with node --experimental-modules if older Node
+// Make sure your package.json has "type": "module"
 
 import fs from "fs";
 import path from "path";
@@ -44,31 +43,35 @@ function chunkText(text, maxLen = 800) {
   return chunks;
 }
 
-async function embedText(text) {
-  try {
-    const url = "https://api.mistral.ai/v1/embeddings";
-    const res = await axios.post(url, {
-      model: MISTRAL_EMBED_MODEL,
-      input: text
-    }, {
-      headers: { Authorization: `Bearer ${MISTRAL_API_KEY}` },
-      timeout: 30000
-    });
+async function embedText(text, retries = 5, delayMs = 5000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await axios.post(
+        "https://api.mistral.ai/v1/embeddings",
+        { model: MISTRAL_EMBED_MODEL, input: text },
+        { headers: { Authorization: `Bearer ${MISTRAL_API_KEY}` }, timeout: 30000 }
+      );
 
-    if (!res.data?.data?.[0]?.embedding) {
-      throw new Error("Unexpected embedding response: " + JSON.stringify(res.data).slice(0, 500));
+      if (!res.data?.data?.[0]?.embedding) {
+        throw new Error("Unexpected embedding response: " + JSON.stringify(res.data).slice(0, 500));
+      }
+
+      return res.data.data[0].embedding;
+
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      if (msg.includes("Service tier capacity exceeded") && attempt < retries) {
+        console.warn(`⚠️ Capacity exceeded, retrying in ${delayMs / 1000}s (attempt ${attempt})...`);
+        await new Promise(r => setTimeout(r, delayMs));
+      } else {
+        throw new Error("Embedding error: " + JSON.stringify(err.response?.data || err.message));
+      }
     }
-
-    return res.data.data[0].embedding;
-  } catch (err) {
-    const details = err.response?.data || err.message || err;
-    throw new Error("Embedding error: " + JSON.stringify(details));
   }
 }
 
 async function upsertVectors(vectors) {
   try {
-    // SDK call
     const res = await index.upsert(vectors);
     return res;
   } catch (err) {
@@ -106,6 +109,7 @@ async function run() {
       const chunks = chunkText(item.text, 800);
       console.log(`Item ${item.id}: split into ${chunks.length} chunk(s).`);
 
+      // Sequential embedding to reduce capacity issues
       for (let i = 0; i < chunks.length; i++) {
         const chunkTextStr = chunks[i];
         console.log(`Embedding chunk ${i + 1}/${chunks.length} for ${item.id} (len=${chunkTextStr.length})...`);
@@ -117,11 +121,9 @@ async function run() {
 
         allVectors.push({ id: vectorId, values: embedding, metadata });
 
-        // Batch upsert every 50 vectors
         if (allVectors.length >= 50) {
           console.log(`Upserting batch of ${allVectors.length} vectors...`);
-          const upsertRes = await upsertVectors(allVectors);
-          console.log("Upsert response:", upsertRes);
+          await upsertVectors(allVectors);
           allVectors.length = 0;
         }
       }
@@ -129,12 +131,12 @@ async function run() {
 
     if (allVectors.length > 0) {
       console.log(`Upserting final batch of ${allVectors.length} vectors...`);
-      const upsertRes = await upsertVectors(allVectors);
-      console.log("Upsert response:", upsertRes);
+      await upsertVectors(allVectors);
     }
 
     console.log("✅ All data uploaded to Pinecone successfully!");
     process.exit(0);
+
   } catch (err) {
     console.error("❌ Script failed:", err.message || err);
     console.error(err.stack || "");

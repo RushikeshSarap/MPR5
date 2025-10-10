@@ -1,27 +1,29 @@
-const express = require('express');
+// routes/chat.js
+import express from 'express';
 const router = express.Router();
 
-const { queryPinecone } = require('../services/pineconeService');
-const { generateReply } = require('../services/mistralService');
+import { queryPinecone } from '../services/pineconeService.js';
+import { generateReply } from '../services/mistralService.js';
 
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const { message } = req.body;
-    if (!message) return res.status(400).json({ error: "Missing 'message' field" });
+    const { message, contextChunks = [] } = req.body;
 
-    console.log("User message:", message);
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Missing or invalid 'message' in request body." });
+    }
 
-    // 1️⃣ Query Pinecone for relevant context
-    const contextChunks = await queryPinecone(message);
-
-    // 2️⃣ Generate reply using Mistral
+    // Call the service to generate reply
     const reply = await generateReply(message, contextChunks);
 
     res.json({ reply });
   } catch (err) {
-    console.error("Error in /api/chat:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Error in /api/chat:", err.message);
+    res.status(500).json({
+      error: "Mistral reply error",
+      details: err.message || err,
+    });
   }
 });
 
-module.exports = router;
+export default router;
