@@ -1,24 +1,27 @@
-// Make sure your package.json has "type": "module"
-
+// services/vectorService.js
 import fs from "fs";
 import path from "path";
 import axios from "axios";
-import dotenv from "dotenv";
 import { Pinecone } from "@pinecone-database/pinecone";
+import "dotenv/config";
 
-dotenv.config();
-
-// ====== ENV VARIABLES ======
 const {
   MISTRAL_API_KEY,
   MISTRAL_EMBED_MODEL,
   PINECONE_API_KEY,
   PINECONE_INDEX_NAME,
-  PINECONE_REGION
+  PINECONE_REGION,
 } = process.env;
 
-if (!MISTRAL_API_KEY || !MISTRAL_EMBED_MODEL || !PINECONE_API_KEY || !PINECONE_INDEX_NAME) {
-  console.error("❌ Missing required env vars. Check .env for MISTRAL_API_KEY, MISTRAL_EMBED_MODEL, PINECONE_API_KEY, PINECONE_INDEX_NAME");
+if (
+  !MISTRAL_API_KEY ||
+  !MISTRAL_EMBED_MODEL ||
+  !PINECONE_API_KEY ||
+  !PINECONE_INDEX_NAME
+) {
+  console.error(
+    "❌ Missing required env vars. Check .env for MISTRAL_API_KEY, MISTRAL_EMBED_MODEL, PINECONE_API_KEY, PINECONE_INDEX_NAME"
+  );
   process.exit(1);
 }
 
@@ -32,8 +35,8 @@ function chunkText(text, maxLen = 800) {
   let start = 0;
   while (start < text.length) {
     let end = Math.min(start + maxLen, text.length);
-    const newline = text.lastIndexOf('\n', end);
-    const dot = text.lastIndexOf('. ', end);
+    const newline = text.lastIndexOf("\n", end);
+    const dot = text.lastIndexOf(". ", end);
     const splitAt = Math.max(newline, dot);
     if (splitAt > start + Math.floor(maxLen * 0.5)) end = splitAt + 1;
     const part = text.slice(start, end).trim();
@@ -49,22 +52,34 @@ async function embedText(text, retries = 5, delayMs = 5000) {
       const res = await axios.post(
         "https://api.mistral.ai/v1/embeddings",
         { model: MISTRAL_EMBED_MODEL, input: text },
-        { headers: { Authorization: `Bearer ${MISTRAL_API_KEY}` }, timeout: 30000 }
+        {
+          headers: { Authorization: `Bearer ${MISTRAL_API_KEY}` },
+          timeout: 30000,
+        }
       );
 
       if (!res.data?.data?.[0]?.embedding) {
-        throw new Error("Unexpected embedding response: " + JSON.stringify(res.data).slice(0, 500));
+        throw new Error(
+          "Unexpected embedding response: " +
+            JSON.stringify(res.data).slice(0, 500)
+        );
       }
 
       return res.data.data[0].embedding;
-
     } catch (err) {
       const msg = err.response?.data?.message || err.message;
       if (msg.includes("Service tier capacity exceeded") && attempt < retries) {
-        console.warn(`⚠️ Capacity exceeded, retrying in ${delayMs / 1000}s (attempt ${attempt})...`);
-        await new Promise(r => setTimeout(r, delayMs));
+        console.warn(
+          `⚠️ Capacity exceeded, retrying in ${
+            delayMs / 1000
+          }s (attempt ${attempt})...`
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
       } else {
-        throw new Error("Embedding error: " + JSON.stringify(err.response?.data || err.message));
+        throw new Error(
+          "Embedding error: " +
+            JSON.stringify(err.response?.data || err.message)
+        );
       }
     }
   }
@@ -72,7 +87,7 @@ async function embedText(text, retries = 5, delayMs = 5000) {
 
 async function upsertVectors(vectors) {
   try {
-    const res = await index.upsert(vectors);
+    const res = await index.upsert({ vectors });
     return res;
   } catch (err) {
     const details = err.response?.data || err.message || err;
@@ -81,7 +96,7 @@ async function upsertVectors(vectors) {
 }
 
 // ====== MAIN FUNCTION ======
-async function run() {
+export async function runVectorUpsert() {
   try {
     const dataPath = path.resolve("data", "admission_info.json");
     if (!fs.existsSync(dataPath)) {
@@ -107,17 +122,25 @@ async function run() {
       }
 
       const chunks = chunkText(item.text, 800);
-      console.log(`Item ${item.id}: split into ${chunks.length} chunk(s).`);
+      // console.log(`Item ${item.id}: split into ${chunks.length} chunk(s).`);
 
-      // Sequential embedding to reduce capacity issues
       for (let i = 0; i < chunks.length; i++) {
         const chunkTextStr = chunks[i];
-        console.log(`Embedding chunk ${i + 1}/${chunks.length} for ${item.id} (len=${chunkTextStr.length})...`);
+        // console.log(
+        //   `Embedding chunk ${i + 1}/${chunks.length} for ${item.id} (len=${
+        //     chunkTextStr.length
+        //   })...`
+        // );
         const embedding = await embedText(chunkTextStr);
-        console.log(`  -> embedding length: ${embedding.length}`);
+        // console.log(`  -> embedding length: ${embedding.length}`);
 
         const vectorId = `${item.id}::${i}`;
-        const metadata = { ...item.metadata, source_id: item.id, chunk_index: i, text: chunkTextStr };
+        const metadata = {
+          ...item.metadata,
+          source_id: item.id,
+          chunk_index: i,
+          text: chunkTextStr,
+        };
 
         allVectors.push({ id: vectorId, values: embedding, metadata });
 
@@ -135,8 +158,6 @@ async function run() {
     }
 
     console.log("✅ All data uploaded to Pinecone successfully!");
-    process.exit(0);
-
   } catch (err) {
     console.error("❌ Script failed:", err.message || err);
     console.error(err.stack || "");
@@ -144,4 +165,7 @@ async function run() {
   }
 }
 
-run();
+// Automatically run if executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runVectorUpsert();
+}

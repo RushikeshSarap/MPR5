@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin PDF Upload</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        background: #f9fafc;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+      }
+
+      .container {
+        margin-top: 60px;
+        background: white;
+        padding: 30px 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-width: 600px;
+      }
+
+      h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #2a2a2a;
+      }
+
+      input[type="file"] {
+        display: block;
+        width: 100%;
+        margin-bottom: 20px;
+        font-size: 16px;
+      }
+
+      button {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        background-color: #0078d7;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      button:hover {
+        background-color: #005ea6;
+      }
+
+      .progress-container {
+        margin-top: 15px;
+        height: 10px;
+        width: 100%;
+        background: #eee;
+        border-radius: 5px;
+        overflow: hidden;
+        display: none;
+      }
+
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #0078d7, #00c3ff);
+        transition: width 0.3s;
+      }
+
+      .output {
+        margin-top: 20px;
+        background: #f4f4f4;
+        padding: 15px;
+        border-radius: 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+
+      .chunk-count {
+        margin-top: 10px;
+        font-weight: bold;
+        color: #0078d7;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>📄 Admin PDF Upload</h2>
+      <form id="uploadForm">
+        <input
+          type="file"
+          id="pdfFile"
+          name="pdfFile"
+          accept="application/pdf"
+          required
+        />
+        <button type="submit">Upload PDF</button>
+      </form>
+
+      <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <div class="chunk-count" id="chunkCount"></div>
+      <div class="output" id="output"></div>
+    </div>
+
+    <script>
+      const form = document.getElementById("uploadForm");
+      const progressContainer = document.querySelector(".progress-container");
+      const progressBar = document.getElementById("progressBar");
+      const output = document.getElementById("output");
+      const chunkCount = document.getElementById("chunkCount");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const fileInput = document.getElementById("pdfFile");
+        if (!fileInput.files.length) {
+          alert("Please select a PDF file first!");
+          return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append("pdfFile", file);
+
+        // Reset UI
+        output.textContent = "";
+        chunkCount.textContent = "";
+        progressContainer.style.display = "block";
+        progressBar.style.width = "0%";
+
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", "/api/pdf/upload", true);
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percent = Math.round((event.loaded / event.total) * 100);
+              progressBar.style.width = percent + "%";
+            }
+          };
+
+          xhr.onload = async () => {
+            progressBar.style.width = "100%";
+            progressContainer.style.display = "none";
+
+            if (xhr.status === 200) {
+              const response = JSON.parse(xhr.responseText);
+              chunkCount.textContent = `✅ Total Chunks: ${response.totalChunks}`;
+              output.textContent = JSON.stringify(response.chunks, null, 2);
+            } else {
+              output.textContent = "❌ Error: " + xhr.statusText;
+            }
+          };
+
+          xhr.onerror = () => {
+            output.textContent = "❌ Network error during upload.";
+            progressContainer.style.display = "none";
+          };
+
+          xhr.send(formData);
+        } catch (err) {
+          console.error(err);
+          output.textContent = "❌ Failed to upload PDF.";
+          progressContainer.style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>

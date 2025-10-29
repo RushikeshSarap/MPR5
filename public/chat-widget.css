@@ -1,5 +1,65 @@
 /* === Chat Widget Styles === */
 
+/* 👇 Compact Markdown output (headings, paragraphs, lists, etc.) */
+.bot-message {
+  background: #e5e5e5;
+  align-self: flex-start;
+  border-radius: 16px;
+  margin: 8px 0;
+  padding: 8px 12px;
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 12px; /* Base bot message text */
+  line-height: 1.4;
+}
+
+/* Override Markdown headings */
+.bot-message h1,
+.bot-message h2,
+.bot-message h3,
+.bot-message h4,
+.bot-message h5,
+.bot-message h6 {
+  font-size: 13px !important; /* Smaller headings */
+  margin: 0.25em 0;
+  font-weight: 600;
+  color: #222;
+}
+
+/* Paragraphs and lists */
+.bot-message p,
+.bot-message li {
+  font-size: 12px !important;
+  margin: 0.25em 0;
+  color: #333;
+  line-height: 1.4;
+}
+
+.bot-message ul,
+.bot-message ol {
+  margin: 0.25em 0 0.25em 1em;
+  padding-left: 1em;
+}
+
+/* Inline code or code blocks */
+.bot-message code {
+  background: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+/* Bold / italic text */
+.bot-message strong {
+  font-weight: 600;
+}
+
+.bot-message em {
+  font-style: italic;
+}
+
+/* 🔹 Main floating button */
 #chatbot-button {
   position: fixed;
   bottom: 20px;
@@ -23,6 +83,7 @@
   background: #004c99;
 }
 
+/* 🔹 Chat window container */
 #chatbot-widget {
   position: fixed;
   bottom: 90px;
@@ -37,6 +98,12 @@
   overflow: hidden;
   z-index: 10000;
   font-family: "Segoe UI", sans-serif;
+  resize: both; /* ← Enables resize in both directions */
+  overflow: hidden; /* Avoids breaking layout when resized */
+  min-width: 250px; /* Optional: limit shrinking */
+  min-height: 350px;
+  max-width: 600px; /* Optional: limit stretching */
+  max-height: 800px;
 }
 
 .chat-header {
@@ -63,27 +130,20 @@
   background: #f7f9fc;
 }
 
-.bot-message,
-.user-message {
-  margin: 8px 0;
-  padding: 8px 12px;
-  border-radius: 16px;
-  max-width: 80%;
-  word-wrap: break-word;
-}
-
-.bot-message {
-  background: #e5e5e5;
-  align-self: flex-start;
-}
-
+/* 🔹 User message styling */
 .user-message {
   background: #0066cc;
   color: white;
   align-self: flex-end;
-  margin-left: auto;
+  margin-left: 20%;
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 16px;
+  max-width: 80%;
+  font-size: 13px;
 }
 
+/* 🔹 Chat input area */
 .chat-input {
   display: flex;
   border-top: 1px solid #ddd;
@@ -109,4 +169,17 @@
 
 #chatbot-send:hover {
   background: #004c99;
+}
+
+/* 📱 Optional: make text even smaller on mobile */
+@media (max-width: 480px) {
+  .bot-message {
+    font-size: 11px;
+  }
+
+  .bot-message h1,
+  .bot-message h2,
+  .bot-message h3 {
+    font-size: 12px !important;
+  }
 }

@@ -1,111 +1,79 @@
-// services/mistralService.js
 import axios from "axios";
-import Bottleneck from "bottleneck";
-import 'dotenv/config';
+import "dotenv/config";
 
-const { MISTRAL_API_KEY, MISTRAL_EMBED_MODEL, MISTRAL_CHAT_MODEL } = process.env;
-
-if (!MISTRAL_API_KEY || !MISTRAL_EMBED_MODEL) {
-  throw new Error(
-    "Missing Mistral API environment variables. Check .env for MISTRAL_API_KEY and MISTRAL_EMBED_MODEL"
-  );
-}
-
-/* ----------------------- 🧠 RATE LIMITERS ----------------------- */
-// 1 embedding request every 3 seconds (to stay well below free-tier cap)
-const embedLimiter = new Bottleneck({
-  minTime: 3000, // 3 seconds between requests
-  maxConcurrent: 1,
-});
-
-// 1 chat request every 2 seconds (safe for replies)
-const chatLimiter = new Bottleneck({
-  minTime: 2000,
-  maxConcurrent: 1,
-});
-
-/* ----------------------- ⚡ EMBEDDINGS ----------------------- */
-export const getEmbedding = embedLimiter.wrap(async (text) => {
+/**
+ * 1️⃣ Get embedding for a text using Mistral API
+ */
+async function getEmbedding(text) {
   try {
     const response = await axios.post(
       "https://api.mistral.ai/v1/embeddings",
       {
-        model: MISTRAL_EMBED_MODEL,
+        model: "mistral-embed",
         input: text,
       },
       {
         headers: {
-          Authorization: `Bearer ${MISTRAL_API_KEY}`,
+          Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
+          "Content-Type": "application/json",
         },
-        timeout: 60000,
       }
     );
-
-    if (!response.data?.data?.[0]?.embedding) {
-      throw new Error("Invalid embedding response: " + JSON.stringify(response.data));
-    }
-
     return response.data.data[0].embedding;
   } catch (err) {
-    const details = err.response?.data || err.message || err;
-
-    // 🔁 Retry logic: if capacity exceeded, wait and retry
-    if (JSON.stringify(details).includes("service_tier_capacity_exceeded")) {
-      console.warn("⚠️ Mistral capacity exceeded — retrying in 5 seconds...");
-      await new Promise((res) => setTimeout(res, 5000));
-      return getEmbedding(text);
-    }
-
-    throw new Error("Mistral embedding error: " + JSON.stringify(details));
+    console.error("❌ Embedding error:", err.response?.data || err.message);
+    throw err;
   }
-});
+}
 
-/* ----------------------- 💬 CHAT COMPLETIONS ----------------------- */
-export const generateReply = chatLimiter.wrap(async (message, contextChunks = []) => {
-  if (!MISTRAL_CHAT_MODEL) {
-    throw new Error("Missing Mistral chat model env variable: MISTRAL_CHAT_MODEL");
-  }
+/**
+ * 2️⃣ Generate a reply using Mistral chat model
+ * Accepts contextChunks as an array of objects or strings.
+ */
+async function generateReply(systemPrompt, userMessage, contextChunks) {
+  // Ensure contextChunks is an array of strings
+  const contextText = (contextChunks || [])
+    .map((c) => (typeof c === "string" ? c : c.text || ""))
+    .join("\n\n");
+
+  const prompt = `${systemPrompt}\n\nContext:\n${contextText}\n\nUser: ${userMessage}\nAssistant:`;
 
   try {
     const response = await axios.post(
       "https://api.mistral.ai/v1/chat/completions",
       {
-        model: MISTRAL_CHAT_MODEL,
+        model: "mistral-large-latest",
         messages: [
           {
             role: "system",
             content:
-              "You are an AI assistant that helps with college admission queries. Be concise and factual.",
+              "You are a helpful, polite admission assistant for Thadomal Shahani Engineering College, Bandra West. Try to complete the response in maximum 400 tokens",
           },
-          {
-            role: "user",
-            content: `${contextChunks.join("\n")}\nUser: ${message}`,
-          },
+          { role: "user", content: prompt },
         ],
-        max_tokens: 200,
+        temperature: 0.2,
+        max_tokens: 400,
       },
       {
         headers: {
-          Authorization: `Bearer ${MISTRAL_API_KEY}`,
+          Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
+          "Content-Type": "application/json",
         },
-        timeout: 60000,
       }
     );
 
-    return (
-      response.data?.choices?.[0]?.message?.content?.trim() ||
-      "No response from Mistral"
-    );
+    return response.data.choices[0].message.content;
   } catch (err) {
-    const details = err.response?.data || err.message || err;
-
-    // 🔁 Retry logic for chat as well
-    if (JSON.stringify(details).includes("service_tier_capacity_exceeded")) {
-      console.warn("⚠️ Mistral chat capacity exceeded — retrying in 5 seconds...");
-      await new Promise((res) => setTimeout(res, 5000));
-      return generateReply(message, contextChunks);
-    }
-
-    throw new Error("Mistral reply error: " + JSON.stringify(details));
+    console.error(
+      "❌ Chat generation error:",
+      err.response?.data || err.message
+    );
+    throw err;
   }
-});
+}
+
+export { getEmbedding, generateReply };
+
+// Aliases for compatibility
+export const createEmbedding = getEmbedding;
+export const createChatCompletion = generateReply;

@@ -1,30 +1,45 @@
-// server.js
-import express from 'express';
-import cors from 'cors';
-import 'dotenv/config';
-import chatRoutes from './routes/chat.js'; // Must use "export default router" in chat.js
+import express from "express";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+import chatRoutes from "./routes/chat.js";
+import pdfRoutes from "./routes/pdfRoutes.js";
+
+dotenv.config();
 
 const app = express();
 
-// Serve static files from "public" folder
-app.use(express.static('public'));
+// Resolve __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Enable CORS for all origins (customize if needed)
+// Serve static files from /public
+app.use(express.static(path.join(__dirname, "public")));
+
+// CORS
 app.use(cors());
 
-// Parse JSON bodies
-app.use(express.json({ limit: '1mb' }));
-
-// Optional: Parse URL-encoded form data
+// JSON parser
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/chat', chatRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/pdf", pdfRoutes);
 
-// Start server
+// Serve upload.html
+app.get("/upload", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "public", "upload.html"));
+});
+
+// 404 fallback for unknown routes
+app.use((req, res) => {
+  res.status(404).send("❌ Not Found");
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Access the server at http://localhost:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Server running on port http://localhost:${PORT}`);
 });

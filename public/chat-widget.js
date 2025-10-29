@@ -1,15 +1,21 @@
 // === Chat Widget Script ===
-// Place this file in /public/chat-widget.js
-// and serve it statically via Express: app.use(express.static('public'))
+// /public/chat-widget.js
+// app.use(express.static('public'))
 
 const CONFIG = {
-  backendUrl: "http://localhost:4000/api/chat", // 🔗 Replace with your backend endpoint
-  title: "Admission Assistant 🤖",
+  backendUrl: "http://localhost:4000/api/chat", // Replace with your backend endpoint
+  title: "Admission Assistant For TSEC",
   themeColor: "#0066cc",
-  welcomeMessage: "Hi! I'm your Admission Assistant. How can I help you today?",
+  welcomeMessage:
+    "Hi! I'm your Admission Assistant Chatbot. How can I help you today?",
 };
 
 (function () {
+  // === Load Markdown Parser ===
+  const script = document.createElement("script");
+  script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+  document.head.appendChild(script);
+
   // Inject CSS
   const style = document.createElement("link");
   style.rel = "stylesheet";
@@ -36,6 +42,18 @@ const CONFIG = {
       <button id="chatbot-send">➤</button>
     </div>
   `;
+
+  // Optional: Adjust message area height dynamically when resized
+  const resizeObserver = new ResizeObserver(() => {
+    const headerHeight = widget.querySelector(".chat-header").offsetHeight;
+    const inputHeight = widget.querySelector(".chat-input").offsetHeight;
+    const messages = widget.querySelector(".chat-messages");
+    messages.style.height = `${
+      widget.offsetHeight - headerHeight - inputHeight
+    }px`;
+  });
+  resizeObserver.observe(widget);
+
   document.body.appendChild(widget);
 
   const chatWindow = document.getElementById("chatbot-widget");
@@ -43,21 +61,34 @@ const CONFIG = {
   const input = document.getElementById("chatbot-input");
   const sendBtn = document.getElementById("chatbot-send");
 
-  // Show welcome message
-  function addBotMessage(text) {
-    const msg = document.createElement("div");
-    msg.className = "bot-message";
-    msg.textContent = text;
-    messagesDiv.appendChild(msg);
+  // Helper: scroll to bottom
+  function scrollToBottom() {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
+  // === Add Bot Message (supports Markdown) ===
+  function addBotMessage(text) {
+    const msg = document.createElement("div");
+    msg.className = "bot-message";
+
+    // Convert markdown to HTML (safe fallback if marked isn't loaded yet)
+    if (window.marked) {
+      msg.innerHTML = marked.parse(text);
+    } else {
+      msg.textContent = text;
+    }
+
+    messagesDiv.appendChild(msg);
+    scrollToBottom();
+  }
+
+  // === Add User Message ===
   function addUserMessage(text) {
     const msg = document.createElement("div");
     msg.className = "user-message";
     msg.textContent = text;
     messagesDiv.appendChild(msg);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    scrollToBottom();
   }
 
   // Toggle chat window
@@ -73,14 +104,14 @@ const CONFIG = {
     button.style.display = "flex";
   });
 
-  // Send message
+  // === Send message ===
   async function sendMessage() {
     const userText = input.value.trim();
     if (!userText) return;
 
     addUserMessage(userText);
     input.value = "";
-    addBotMessage("Typing...");
+    addBotMessage("_Typing..._");
 
     try {
       const res = await fetch(CONFIG.backendUrl, {
