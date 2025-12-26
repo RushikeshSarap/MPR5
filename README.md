@@ -16,7 +16,5 @@ This repository contains a minimal backend skeleton for an AI-powered admission 
 - The Pinecone HTTP endpoints used in `services/vectorService.js` are placeholders. Prefer using the provider's official SDK for reliability and security.
 - Secure your API keys and restrict admin endpoints behind auth. Add rate-limiting in production.
 
-- Deployment scripts (Dockerfile + docker-compose)
-
 
 ---

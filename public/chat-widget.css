@@ -64,7 +64,7 @@
   position: fixed;
   bottom: 20px;
   right: 25px;
-  background: #0066cc;
+  background: #8800cc;
   color: white;
   border-radius: 50%;
   width: 60px;
@@ -80,7 +80,7 @@
 }
 
 #chatbot-button:hover {
-  background: #004c99;
+  background: #9a07e3;
 }
 
 /* 🔹 Chat window container */
@@ -110,6 +110,7 @@
   color: white;
   padding: 12px;
   font-weight: bold;
+  font-size: medium;
   display: flex;
   justify-content: space-between;
   align-items: center;

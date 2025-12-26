@@ -1,6 +1,6 @@
 import * as mistral from "../services/mistralService.js";
-import * as vector from "../services/vectorService.js";
-import db from "../db/mysql.js";
+// import * as vector from "../services/vectorService.js";
+import db from "../database/mysql.js";
 
 export async function uploadKnowledge(req, res) {
   try {
@@ -37,7 +37,7 @@ export async function uploadKnowledge(req, res) {
 
     // 3️⃣ store reference in MySQL
     const [result] = await db.execute(
-      `INSERT INTO knowledge_entries (title, content, category, source, vector_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO knowledge_entries (title, content, category, source, vector_id) VALUES (?, ?, ?, ?, ?)`,
       [title, content, category || null, source || null, vectorId]
     );
 

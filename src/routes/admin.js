@@ -1,6 +1,6 @@
 // routes/admin.js
 import express from "express";
-import db from "../db/mysql.js"; // ESM import
+import db from "../database/mysql.js"; // ESM import
 
 const router = express.Router();
 

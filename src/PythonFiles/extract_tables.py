@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, requests, jsonify
 import camelot
 import tabula
 import pandas as pd
@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 @app.route('/extract', methods=['POST'])
 def extract():
-    data = request.get_json()
+    data = requests.get_json()
     file_path = data.get('file_path')
 
     if not file_path or not os.path.exists(file_path):

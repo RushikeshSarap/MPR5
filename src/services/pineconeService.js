@@ -19,9 +19,6 @@ async function getIndex() {
     );
   }
 
-  // Construct the Pinecone client using the SDK's Pinecone class.
-  // The SDK accepts `apiKey` (and optionally `controllerHostUrl`).
-  // Do not pass `environment` here — that property is not accepted by this SDK build.
   const clientConfig = { apiKey: PINECONE_API_KEY };
   if (process.env.PINECONE_CONTROLLER_HOST) {
     clientConfig.controllerHostUrl = process.env.PINECONE_CONTROLLER_HOST;
@@ -76,7 +73,7 @@ export async function queryVectors(embedding, topK = 5) {
       topK,
       includeMetadata: true,
     });
-    console.log(result.matches || []);
+    // console.log(result.matches || []);
     return result.matches || [];
   } catch (err) {
     console.error(

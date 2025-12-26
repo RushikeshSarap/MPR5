@@ -36,7 +36,7 @@ async function generateReply(systemPrompt, userMessage, contextChunks) {
     .map((c) => (typeof c === "string" ? c : c.text || ""))
     .join("\n\n");
 
-  const prompt = `${systemPrompt}\n\nContext:\n${contextText}\n\nUser: ${userMessage}\nAssistant:`;
+  const prompt = `Context:\n${contextText}\n\nUser: ${userMessage}\nAssistant:`;
 
   try {
     const response = await axios.post(
@@ -44,11 +44,7 @@ async function generateReply(systemPrompt, userMessage, contextChunks) {
       {
         model: "mistral-large-latest",
         messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful, polite admission assistant for Thadomal Shahani Engineering College, Bandra West. Try to complete the response in maximum 400 tokens",
-          },
+          { role: "system", content: systemPrompt,},
           { role: "user", content: prompt },
         ],
         temperature: 0.2,

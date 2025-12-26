@@ -3,9 +3,9 @@
 // app.use(express.static('public'))
 
 const CONFIG = {
-  backendUrl: "http://localhost:4000/api/chat", // Replace with your backend endpoint
+  backendUrl: "http://localhost:4000/api/chat",
   title: "Admission Assistant For TSEC",
-  themeColor: "#0066cc",
+  themeColor: "#8800cc",
   welcomeMessage:
     "Hi! I'm your Admission Assistant Chatbot. How can I help you today?",
 };

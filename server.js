@@ -4,8 +4,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
-import chatRoutes from "./routes/chat.js";
-import pdfRoutes from "./routes/pdfRoutes.js";
+import chatRoutes from "./src/routes/chat.js";
+import pdfRoutes from "./src/routes/pdfRoutes.js";
 
 dotenv.config();
 
